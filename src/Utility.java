@@ -47,10 +47,10 @@ public class Utility {
 	private static Connection myConnection;
 
 	// ----Parametri di connessione db-------
-	private static String host = "";
-	private static String db = "";
-	private static String user = "";
-	private static String pass = "";
+	private static String host = "212.189.207.212";
+	private static String db = "name_db_1";
+	private static String user = "root";
+	private static String pass = "4rthuR!";
 
 	
 	
@@ -210,12 +210,12 @@ public class Utility {
 					"intervento.idInterventoTipo = capacitarichieste.idInterventoTipo "+
 					"JOIN competenzetecniche ON capacitarichieste.idCompetenza = competenzetecniche.idCompetenza "+
 					"WHERE intervento.idIntervento= "+id+" ;");*/
-			return myResultSet = myStatement.executeQuery("SELECT intervento.idIntervento, " +
-					"intervento.idInterventoTipo, competenzetecniche.tipoCompetenza, competenzetecniche.idCompetenza " +
-					"FROM  `capacitarichieste` JOIN intervento ON " +
-					"intervento.idInterventoTipo = capacitarichieste.idInterventoTipo "+
-					"JOIN competenzetecniche ON capacitarichieste.idCompetenza = competenzetecniche.idCompetenza "+
-					"WHERE intervento.idIntervento= "+id+" ;");
+			return myResultSet = myStatement.executeQuery("SELECT interventi.idIntervento, " +
+					"interventi.idTipoInt, competenze.tipo, competenze.idCompetenza " +
+					"FROM  `capacitaRichieste` JOIN interventi ON " +
+					"interventi.idTipoInt = capacitaRichieste.idTipoInt "+
+					"JOIN competenze ON capacitaRichieste.idCompetenza = competenze.idCompetenza "+
+					"WHERE interventi.idIntervento= "+id+" ;");
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -258,7 +258,7 @@ public class Utility {
 		try {
 			myStatement = myConnection.createStatement();
 			return myResultSet = myStatement
-					.executeQuery("SELECT * FROM intervento");
+					.executeQuery("SELECT * FROM interventi");
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -329,6 +329,7 @@ public class Utility {
 				String comodo = intermediatelSolution.get(i);
 				for(int j=comodo.length();j<m;j++){
 					intermediatelSolution.set(i, (comodo="0"+comodo));
+					//System.out.println(comodo);
 				}
 			}
 		}
@@ -392,7 +393,7 @@ public class Utility {
 		//MOMENTANEAMENTE IL CECK SULLE COMPOTENZE NON E' UTILE
 		
 		for(int i=0;i<totalSolutionNoOrdered.size();i++){
-			System.out.println(i);
+			//System.out.println(i);
 			oneSolutionNoOrder = totalSolutionNoOrdered.get(i);
 			//solutionInOrder solutionComodo = new solutionInOrder();
 			
@@ -575,9 +576,9 @@ public class Utility {
 		dbOpenConnection(host, db, user, pass);
 		try{
 			myStatement = myConnection.createStatement();
-			return myResultSet = myStatement.executeQuery("SELECT intervento.idIntervento, " +
-					"intervento.durata, intervento.idImpianto, intervento.priorita " +
-					"FROM intervento join impianto on intervento.idImpianto = impianto.idImpianto " +
+			return myResultSet = myStatement.executeQuery("SELECT interventi.idIntervento, " +
+					"interventi.durata, interventi.idImpianto, interventi.priorita " +
+					"FROM interventi join impianti on interventi.idImpianto = impianti.idImpianto " +
 					"order by idIntervento asc;");
 		}
 		catch (SQLException e) {
@@ -848,11 +849,11 @@ public class Utility {
 		
 		for(int i=0;i<distanzeImpianti.size();i++){
 			
-			if((distanzeImpianti.get(i).get("idImpianto1").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpianto2").equals(idDestinazione))){
+			if((distanzeImpianti.get(i).get("idImpiantoS").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpiantoD").equals(idDestinazione))){
 				durata= Float.valueOf(distanzeImpianti.get(i).get("durata"));
 				return durata;
 			}
-			if((distanzeImpianti.get(i).get("idImpianto2").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpianto1").equals(idDestinazione))){
+			if((distanzeImpianti.get(i).get("idImpiantoD").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpiantoS").equals(idDestinazione))){
 				durata= Float.valueOf(distanzeImpianti.get(i).get("durata"));
 				return durata;
 			}
@@ -869,7 +870,7 @@ public class Utility {
 		dbOpenConnection(host, db, user, pass);
 		try{
 			myStatement = myConnection.createStatement();
-			myResultSet = myStatement.executeQuery("Select * From distanzeimpianti; ");
+			myResultSet = myStatement.executeQuery("Select * From distanzeImpianti; ");
 			ResultSetMetaData myMeta = myResultSet.getMetaData();
 			
 			while(myResultSet.next()){
@@ -933,11 +934,11 @@ public class Utility {
 		
 		for(int i=0;i<distanzeImpianti.size();i++){
 			
-			if((distanzeImpianti.get(i).get("idImpianto1").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpianto2").equals(idDestinazione))){
+			if((distanzeImpianti.get(i).get("idImpiantoS").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpiantoD").equals(idDestinazione))){
 				distanza= Float.valueOf(distanzeImpianti.get(i).get("distanza"));
 				return distanza;
 			}
-			if((distanzeImpianti.get(i).get("idImpianto2").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpianto1").equals(idDestinazione))){
+			if((distanzeImpianti.get(i).get("idImpiantoD").equals(idOrigine)) && (distanzeImpianti.get(i).get("idImpiantoS").equals(idDestinazione))){
 				distanza= Float.valueOf(distanzeImpianti.get(i).get("distanza"));
 				return distanza;
 			}
