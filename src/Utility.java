@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -17,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.regex.PatternSyntaxException;
 
 
 /**
@@ -27,6 +29,7 @@ import java.util.StringTokenizer;
  */
 public class Utility {
 
+	static public String dirName = new String();
 	
 	//Attributi della classe per eseguire stampe su file
 	static private FileWriter myWriter;
@@ -47,10 +50,13 @@ public class Utility {
 	private static Connection myConnection;
 
 	// ----Parametri di connessione db-------
-	private static String host = "";
-	private static String db = "";
-	private static String user = "";
-	private static String pass = "";
+	private static String host = "212.189.207.212";
+	private static String db = "test_PA";
+	private static String user = "root";
+	private static String pass = "smartME#";
+	
+	//public static Random random = new Random();
+	public static SecureRandom sRandom = new SecureRandom();
 
 	
 	
@@ -194,6 +200,85 @@ public class Utility {
 		dbCloseConnection();
 	}
 	
+	/**
+	 * Metodo per l'estrazione di  tutti gli interventi dal DB e dell'inizializzazione dei valori di 
+	 * durata e idImpianto dei singoli interventi
+	 */
+	public static void initInterventiRandom(int number){
+		ResultSet myResutlSet = Utility.getInterventi();
+		//Aggiornamento per la versione random e con numero di elementi
+		
+		//***** Prelevo tutti gli interventi dal DB
+		ArrayList<Intervento> totaleInterventi = new ArrayList<Intervento>();
+		try{
+			while(myResutlSet.next()){
+				totaleInterventi.add(new Intervento(myResutlSet.getString("idIntervento")));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		
+		myResutlSet = Utility.getInfoInterventi();
+		try{
+			for(int i=0; i<totaleInterventi.size() && myResutlSet.next(); i++){
+				totaleInterventi.get(i).setPriority(myResutlSet.getInt("priorita"));
+				totaleInterventi.get(i).setDurata(myResutlSet.getInt("durata"));
+				totaleInterventi.get(i).setIdImpianto(myResutlSet.getString("idImpianto"));	
+			}
+			
+			//Competenze necessarie per ogni intervento
+			for(int i=0;i<totaleInterventi.size();i++){
+				myResutlSet = Utility.getCopetenzeIntervento(totaleInterventi.get(i).getId());
+				while(myResutlSet.next()){
+					totaleInterventi.get(i).setCompentenza(myResutlSet.getString("idCompetenza"));
+				}
+			}
+				
+		}catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		dbCloseConnection();
+		//****************************************
+		
+		//Prelevo solo quelli Custom e in modo Random
+		
+		for(int i=0; i<number; i++){
+			int interventoRandom = sRandom.nextInt(totaleInterventi.size());
+			interventi.add(totaleInterventi.get(interventoRandom));
+			totaleInterventi.remove(interventoRandom);
+		}
+		//Creo la working directory
+		createDir();
+	}
+	
+	/**
+	 * Metodo di utilità:
+	 * 
+	 * Creare una dirctory di lavoro con un nome basato degli interventi selezionati;
+	 * 
+	 * Crea un file contenete l'lenco deigli ID degli interventi utilizzati
+	 */
+	public static void createDir(){
+		
+		for(int i=0; i< interventi.size();i++){
+			if(i ==0){
+				dirName+=interventi.get(i).getId();
+			}
+			else{
+				dirName+="-"+interventi.get(i).getId();
+			}
+		}
+		File dir = new File("./"+dirName);
+		dir.mkdirs();
+		
+		openFile(dirName+"/usedInterventions");
+		printToFile(dirName);
+		closefile();
+	}
+	
+	
 	
 	/**
 	 * Metdodo per il reperimento delle competenze necessarie per l'esuzione di un determinato intervento
@@ -324,6 +409,7 @@ public class Utility {
 		//Generazione di tutte le possibili soluzioni (disposizioni n m)
 		//Generazioni in formato compatto di tutte le soluzioni di assegnazione degli interventi alle squadre
 		for(int i=1; i<Math.pow(n, m); i++){
+			System.out.println(i+"/"+Math.pow(n, m));
 			intermediatelSolution.add(new String(Integer.toString((Integer.valueOf(intermediatelSolution.get(i-1), n)+1), n))); 
 			if(intermediatelSolution.get(i).length()<m){
 				String comodo = intermediatelSolution.get(i);
@@ -365,8 +451,7 @@ public class Utility {
 			
 			totalSolutionNoOrdered.add(comodoOneSolution);
 			//intermediatelSolution.remove(0);
-			System.out.println("dim sintetic:"+intermediatelSolution.size());
-			System.out.println("dim Extended_NO_ORDER:"+totalSolutionNoOrdered.size());
+			System.out.println("Loading:"+intermediatelSolution.size()+"/"+totalSolutionNoOrdered.size());
 			
 			//DEBUGGGGG
 			//printToFile(comodoOneSolution.toString()+"\n");
@@ -376,6 +461,7 @@ public class Utility {
 		intermediatelSolution.clear();
 
 		OneSolution oneSolutionNoOrder = new OneSolution(n, m);
+		
 		//Vengono generate tutte le possibili soluzioni in cui viene considerato anche l'ordine 
 		//di esecuzione degli interventi e calcolato il costo
 		
@@ -392,29 +478,41 @@ public class Utility {
 		//MOMENTANEAMENTE IL CECK SULLE COMPOTENZE NON E' UTILE
 		
 		for(int i=0;i<totalSolutionNoOrdered.size();i++){
-			System.out.println(i);
+			System.out.println(totalSolutionNoOrdered.size());
+			
 			oneSolutionNoOrder = totalSolutionNoOrdered.get(i);
 			//solutionInOrder solutionComodo = new solutionInOrder();
 			
 			int[][] comodo = oneSolutionNoOrder.getMatrix();
 			boolean controllo = true;
 			for(int z=0; z<n && controllo; z++){
-				String lista_interventi = new String();
+				//String lista_interventi = new String();
+				ArrayList<String> listToCheck = new ArrayList<String>();
 				for(int w=0; w<m;w++){
 					if(comodo[z][w]==1){
 						//lista_interventi+=(w+1);
-						lista_interventi+=(w);
+						//if(w==0)
+							listToCheck.add(String.valueOf(w));
+							//lista_interventi+=(w);//+":";
+						//else
+							//lista_interventi+=":"+(w);//+":";
 					}
 				}
-				if(lista_interventi.length()>0){
-					if(!checkListaInterventi(lista_interventi, String.valueOf(z))){
+				//ArrayList<String> listToCheck = new ArrayList<>();
+				//DEBUG
+				/*for(String splitted : lista_interventi.split(":")){
+					listToCheck.add(splitted);
+				}*/
+				
+				if(listToCheck.size()>0){
+					if(!checkListaInterventi(listToCheck, String.valueOf(z))){
 						controllo = false;
 						totalSolutionNoOrdered.remove(i);
 						i--;
 						break;
 					}
 					else{
-						System.out.println("Accetto");
+						//System.out.println("Accetto");
 					}
 				}
 				
@@ -432,15 +530,15 @@ public class Utility {
 				
 			int[][] comodo = oneSolutionNoOrder.getMatrix();
 			
-			//Valutazione del costo per le tutte le possibile permutazioni
-			//nell'ordine di esecuzione degli interventi associati
+			//Valutazione del costo per tutte le possibili permutazioni
+			//nell'ordine di esecuzione degl'interventi associati
 			for(int z=0; z<n; z++){
 				//String lista_interventi = new String();
 				ArrayList<Integer> lista_interventi = new ArrayList<Integer>();
 				for(int w=0; w<m;w++){
 					if(comodo[z][w]==1){
 						//lista_interventi+=(w);
-						lista_interventi.add(w+1);
+						lista_interventi.add(w);
 					}
 				}
 	
@@ -493,7 +591,7 @@ public class Utility {
 				vetCostSquadre[z]=0;
 		}
 		
-		openFile("FinalSolution");
+		openFile(dirName+"/FinalSolution");
 		System.out.print(minSolution.toString());
 		printToFile("\n"+minSolution.toString()+"\n");
 		closefile();
@@ -625,7 +723,7 @@ public class Utility {
 		//Calcolo la distanza totale per visitare tutti gli impianti della lista di interventi
 		for(int i=0;i<listaInterventi.length;i++){
 			//CONTROLLARE QUESTA ISTRUZIONE
-			int indice = listaInterventi[i]-1; //Controllare
+			int indice = listaInterventi[i]; //Controllare
 			
 			idImpiantoSuccessivo = interventi.get(indice).getIdImpianto();
 			
@@ -735,6 +833,17 @@ public class Utility {
 		
 	}
 	
+	public static boolean checkListaInterventi(ArrayList<String> listaInterventi,String idSquadra){
+		//System.out.println("checkListaInterventi");
+		for(int i=0;i<listaInterventi.size();i++){
+				if(!checkIntSquad(Integer.valueOf(listaInterventi.get(i)), Integer.valueOf(idSquadra)))
+			return false;
+			
+		}
+		return true;
+		
+	}
+	
 	/**
 	 * Metodo di supporto per verificare se un dato intervento può essere eseguito da una specifica squadra
 	 * @param indiceIntervento 
@@ -742,7 +851,7 @@ public class Utility {
 	 * @return true se l'intervetnto puo' essere eseguito dalla squadro, false altrimenti
 	 */
 	public static boolean checkIntSquad(int indiceIntervento, int indiceSquadra){
-		
+		//System.out.println("checkListaInterventi");
 		
 		ArrayList<String> compIntervneto = interventi.get(indiceIntervento).getCompetenze();
 		ArrayList<String> compSquadra = squadre.get(indiceSquadra).getCompentenze();
@@ -1000,11 +1109,11 @@ public class Utility {
 		}
 		
 		//Controllo se già è presente un file che contiene il valore minimo per quella lista di interventi e squadra
-		File file = new File ("analisi"+stampa(arrayComodo)+"squadra::"+idSquadra+".txt");
+		File file = new File (dirName+"/analisi"+stampa(arrayComodo)+"squadra::"+idSquadra+".txt");
 		if(file.exists()){//Se esiste estrapolo il valore minimo
 			
 			try {
-				FileReader myFileReader = new FileReader("analisi"+stampa(arrayComodo)+"squadra::"+idSquadra+".txt");
+				FileReader myFileReader = new FileReader(dirName+"/analisi"+stampa(arrayComodo)+"squadra::"+idSquadra+".txt");
 				BufferedReader myBufferReader = new BufferedReader(myFileReader);
 				String line = myBufferReader.readLine();
 				String linePenultima = new String();;
@@ -1039,27 +1148,30 @@ public class Utility {
 		}
 		else{//Se non esiste calcolo e creo il fiel
 			boolean first = true;
-			openFile("analisi"+stampa(arrayComodo)+"squadra::"+idSquadra);
+			openFile(dirName+"/analisi"+stampa(arrayComodo)+"squadra::"+idSquadra);
 			//Calcolo del costo per l'esecuzione degli interventi nell'ordine della prima permutazione
 			copyIntArray(arrayComodo, listaIntMin);
 			
 			//DEBUG Message
-			System.out.println(stampa(arrayComodo));
+			//System.out.println(stampa(arrayComodo));
 			
 			if(checkPriority(arrayComodo)){
 				first = false;
 				minCost = costoIntervetiPerSquadra(arrayComodo, idSquadra);
 				//DEBUGGGGG
-				printToFile("valuto squadra id:"+idSquadra+":listaInt:"+stampa(arrayComodo)+":costo:"+minCost+"\n");	
+				printToFile("valuto squadra id:"+idSquadra+":listaInt:"+stampaIdInt(arrayComodo)+":costo:"+minCost+"\n");	
 			}
 			
 			//Generazione di tutte le possibili permutazioni dell'ordine degli interventi e calcolo del costo migliore
 			while(onePermutation(arrayComodo)){
-		
+				
+				//DEBUG
+				//System.out.println(stampa(arrayComodo));
+				
 				if(checkPriority(arrayComodo)){
 					actualEsamsCost=costoIntervetiPerSquadra(arrayComodo, idSquadra);
 					//DEBUGGGGG
-					printToFile("valuto squadra id:"+idSquadra+":listaInt:"+stampa(arrayComodo)+":costo:"+actualEsamsCost+"\n");
+					printToFile("valuto squadra id:"+idSquadra+":listaInt:"+stampaIdInt(arrayComodo)+":costo:"+actualEsamsCost+"\n");
 
 					//Utility.stampa(arrayComodo);
 					//System.out.println("costo attuale::"+actualEsamsCost);
@@ -1086,8 +1198,17 @@ public class Utility {
 			//Creo la sringa rappresentante l'ordine di esecuzione degli interventi minimo
 			String listaInterventiMIN = new String();
 			for(int i=0;i<listaIntMin.length;i++){
-				listaInterventiMIN+=listaIntMin[i];
+				//listaInterventiMIN+=listaIntMin[i];
+				if(i==0){
+					listaInterventiMIN=interventi.get(listaIntMin[i]).getId();
+				}
+				else{
+					listaInterventiMIN+="-"+interventi.get(listaIntMin[i]).getId();
+				}
 			}
+			
+			
+			
 			listaCosto.add(listaInterventiMIN);
 			listaCosto.add(String.valueOf(minCost));
 			
@@ -1190,7 +1311,8 @@ public class Utility {
     public static boolean checkPriority(int[] array){
     	
     	int count = 0;
-    	int first = interventi.get(array[array.length-1]-1).getPriority();
+    	int first = interventi.get(array[array.length-1]).getPriority();
+    	//DEBUG
     	
     	/*
     	 * Per verificare se la lista degli interventi rispetta l'ordine
@@ -1203,33 +1325,42 @@ public class Utility {
     	 * alta ad una bassa
     	 */
     	if(first == 1){
-    		for(int i = array.length-1; i>=0 ; i--){
-    			if (first != interventi.get(array[i]-1).getPriority()){
+    		for(int i = array.length-2; i>=0 ; i--){
+    			if (first != interventi.get(array[i]).getPriority()){
     				count ++;
-    				first = interventi.get(array[i]-1).getPriority();
     			}
+    			first = interventi.get(array[i]).getPriority();
     		}
-    		if(count == 0 )
+    		if(count == 0 ){
+    			//System.out.println("Priovità OK!!");
     			return true;
-    		else
+    		}
+    		else{
+    			//System.out.println("Priovità SBAGLIATA!!");
     			return false;
+    			}
     	}
     	/*
-    	 * Nel secondo caso se l'ultimo elemento della lista ha priorità 0 non devono
+    	 * Nel secondo caso che l'ultimo elemento della lista ha priorità 0 non devono
     	 * esserci più di un cambiamento di stato non potendo passare da una  
     	 * bassa bassa ad una alta e poi nuovamente ad una bassa
     	 */
     	else{
-    		for(int i = array.length-1; i>=0 ; i--){
-    			if (first != interventi.get(array[i]-1).getPriority()){
+    		for(int i = array.length-2; i>=0 ; i--){
+    			if (first != interventi.get(array[i]).getPriority()){
     				count ++;
-    				first = interventi.get(array[i]-1).getPriority();
     			}
+    			first = interventi.get(array[i]).getPriority();
     		}
-    		if(count == 0 || count == 1 )
+    		if(count == 0 || count == 1 ){
+    			//System.out.println("Priovità OK!!");
     			return true;
-    		else
+    			
+    		}
+    		else{
+    			//System.out.println("Priovità SBAGLIATA!!");
     			return false;
+    		}
     	}
     }
     
@@ -1245,4 +1376,23 @@ public class Utility {
 		}
 		return result;
 	}
+    
+    /**
+     * Metodo di supporto stampa da un array di interi i rispettivi id degli interventi corrispondenti
+     * @param array
+     * @return String 
+     */
+    public static String stampaIdInt(int [] array){
+    	String result = new String();
+		for(int i=0;i<array.length;i++){
+			if(i==0){
+				result=interventi.get(array[i]).getId();
+			}
+			else{
+				result+="-"+interventi.get(array[i]).getId();
+			}
+		}
+		return result;
+	}
+    
 }
