@@ -51,7 +51,7 @@ public class Utility {
 
 	// ----Parametri di connessione db-------
 	private static String host = "212.189.207.212";
-	private static String db = "test_PA";
+	private static String db = "test";
 	private static String user = "root";
 	private static String pass = "smartME#";
 	
@@ -201,8 +201,10 @@ public class Utility {
 	}
 	
 	/**
-	 * Metodo per l'estrazione di  tutti gli interventi dal DB e dell'inizializzazione dei valori di 
-	 * durata e idImpianto dei singoli interventi
+	 * Metodo di supporto per l'inizializzazione degli interventi da utilizzare nell'algoritmo esaustivo
+	 * Il metodo preleverà in modo random @param number di interventi dai totali presenti nel DB utilizzato
+	 * 
+	 * @param number
 	 */
 	public static void initInterventiRandom(int number){
 		ResultSet myResutlSet = Utility.getInterventi();
@@ -253,6 +255,124 @@ public class Utility {
 		createDir();
 	}
 	
+	
+	/**
+	 * Metodo di supporto per l'inizializzazione degli interventi da utilizzare nell'algoritmo esaustivo
+	 * Il metodo preleverà in modo random @param number di interventi dai totali presenti nel DB utilizzato
+	 * 
+	 * @param number
+	 */
+	public static void initInterventiRandom(int numberPA, int numberCA, int numberME){
+		ResultSet myResutlSet = Utility.getInterventi();
+		//Aggiornamento per la versione random e con numero di elementi
+		
+		//***** Prelevo tutti gli interventi dal DB
+		ArrayList<Intervento> totaleInterventi = new ArrayList<Intervento>();
+		try{
+			while(myResutlSet.next()){
+				totaleInterventi.add(new Intervento(myResutlSet.getString("idIntervento")));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		
+		myResutlSet = Utility.getInfoInterventi();
+		try{
+			for(int i=0; i<totaleInterventi.size() && myResutlSet.next(); i++){
+				totaleInterventi.get(i).setPriority(myResutlSet.getInt("priorita"));
+				totaleInterventi.get(i).setDurata(myResutlSet.getInt("durata"));
+				totaleInterventi.get(i).setIdImpianto(myResutlSet.getString("idImpianto"));	
+			}
+			
+			//Competenze necessarie per ogni intervento
+			for(int i=0;i<totaleInterventi.size();i++){
+				myResutlSet = Utility.getCopetenzeIntervento(totaleInterventi.get(i).getId());
+				while(myResutlSet.next()){
+					totaleInterventi.get(i).setCompentenza(myResutlSet.getString("idCompetenza"));
+				}
+			}
+				
+		}catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
+		dbCloseConnection();
+		//****************************************
+		int[] selected = new int[numberPA];
+		// Prelevo solo quelli Custom e in modo Random in provincia di PA
+		for (int i = 0; i < numberPA; i++) {
+			int interventoRandom;
+			if (i == 0) {
+				interventoRandom = sRandom.nextInt(20);
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			} else {
+				do {
+					interventoRandom = sRandom.nextInt(20);
+				} while (checkInVector(selected, interventoRandom));
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			}
+		}
+		
+		selected = new int[numberPA];
+		// Prelevo solo quelli Custom e in modo Random in provincia di PA
+		for (int i = 0; i < numberCA; i++) {
+			int interventoRandom;
+			
+			if (i == 0) {
+				interventoRandom = sRandom.nextInt(20);
+				interventoRandom+=20;
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			} else {
+				do {
+					interventoRandom = sRandom.nextInt(20);
+					interventoRandom+=20;
+				} while (checkInVector(selected, interventoRandom));
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			}
+		}
+
+		selected = new int[numberPA];
+		// Prelevo solo quelli Custom e in modo Random in provincia di PA
+		for (int i = 0; i < numberME; i++) {
+			int interventoRandom;
+			
+			if (i == 0) {
+				interventoRandom = sRandom.nextInt(20);
+				interventoRandom += 40;
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			} else {
+				do {
+					interventoRandom = sRandom.nextInt(20);
+					interventoRandom += 40;
+				} while (checkInVector(selected, interventoRandom));
+				selected[i] = interventoRandom;
+				interventi.add(totaleInterventi.get(interventoRandom));
+			}
+		}
+
+		//Creo la working directory
+		createDir();
+	}
+	
+	/**
+	 * Metdo di support per verifica se nel vettore @param vect è presente un elemento con valore
+	 * @param key
+	 * Il Metodo ritorna true se l'emento è stato trovato
+	 * @return
+	 */
+	public static boolean checkInVector(int[] vect, int key){
+		boolean result = false;
+		for(int i = 0; i< vect.length; i++)
+			if(vect[i]==key)
+				result=true;
+		return result;
+	}
 	/**
 	 * Metodo di utilità:
 	 * 
