@@ -316,7 +316,7 @@ public class Utility {
 			}
 		}
 		
-		selected = new int[numberPA];
+		selected = new int[numberCA];
 		// Prelevo solo quelli Custom e in modo Random in provincia di PA
 		for (int i = 0; i < numberCA; i++) {
 			int interventoRandom;
@@ -336,7 +336,7 @@ public class Utility {
 			}
 		}
 
-		selected = new int[numberPA];
+		selected = new int[numberME];
 		// Prelevo solo quelli Custom e in modo Random in provincia di PA
 		for (int i = 0; i < numberME; i++) {
 			int interventoRandom;
